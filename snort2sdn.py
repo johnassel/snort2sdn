@@ -16,7 +16,7 @@ if os.path.exists(socketPath):
 snort = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 snort.bind(socketPath)
 
-#setzen des Owners + Group auf Snort (ohne kein Logging)
+#setzen des Owners + Group auf Snort (ohne keine alerts)
 os.chown(socketPath, 1001, 1001)
 
 def convertMac(addr):#MAC von HEX nach string
@@ -30,6 +30,18 @@ def getType(number):
     if number == 2048:
         type = "IPv4"
     return type
+
+def createRule(dst,src):
+    return null
+    #todo
+    
+def deleteRule(addr,id):
+    return null
+    #todo
+    
+def pushToController(addr):
+    return null
+    #todo
 
 print("Warten")
 while True:
