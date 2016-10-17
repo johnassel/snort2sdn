@@ -33,15 +33,15 @@ def getType(number):
 
 def createRule(dst,src):
     return null
-    #todo
+    #todo https://pymotw.com/2/xml/etree/ElementTree/create.html
     
-def deleteRule(addr,id):
+def removeFromController(addr,id):
     return null
-    #todo
+    #todo https://docs.python.org/2/library/httplib.html
     
 def pushToController(addr):
     return null
-    #todo
+    #todo https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
 
 print("Warten")
 while True:
