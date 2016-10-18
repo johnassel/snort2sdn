@@ -4,6 +4,7 @@ import os, os.path
 import alert
 import dpkt
 import datetime
+import xml.etree.ElementTree
 
 socketPath="/var/log/snort/snort_alert"
 
