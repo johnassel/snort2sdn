@@ -14,7 +14,7 @@ switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/
 controllerUser="admin"
 controllerPass="admin"
 
-ruleCounter=200
+ruleCounter=200 
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -43,13 +43,13 @@ def getType(number):
     return type
 
 def createRule(pDst,pSrc):
-    #Reference: https://pymotw.com/2/xml/etree/ElementTree/create.html
+    #Referenz: https://pymotw.com/2/xml/etree/ElementTree/create.html
     global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
-    
-    print "Creating Rule"
-    
+     
     dst=pDst+"/32"
     src=pSrc+"/32"
+    
+    print "Creating Rule for blocking traffic from "+src+" to "+dst
     
     register_namespace('', "urn:opendaylight:flow:inventory")
     flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
@@ -97,17 +97,17 @@ def createRule(pDst,pSrc):
 
     
 def removeFromController(pAddr,pId):
-    #Reference: https://docs.python.org/2/library/httplib.html
+    #Referenz: https://docs.python.org/2/library/httplib.html
     addr=pAddr
     id=pId
     
 def pushToController(pFlow):
-    #Reference: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
+    #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
     flow=pFlow
     addr=switchAddr+str(ruleCounter)
     headers = {"Content-Type":"application/xml","Accept":"application/xml"}
-    print "pushing"
+    print "Applying..."
     response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
     print(response.content)
     
