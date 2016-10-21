@@ -4,7 +4,8 @@ import os, os.path
 import alert
 import dpkt
 import datetime
-import xml.etree.ElementTree
+from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from xml.dom import minidom
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -32,17 +33,61 @@ def getType(number):
         type = "IPv4"
     return type
 
-def createRule(dst,src):
-    return null
-    #todo https://pymotw.com/2/xml/etree/ElementTree/create.html
+def createRule(pDst,pSrc):
+    #Reference: https://pymotw.com/2/xml/etree/ElementTree/create.html
     
-def removeFromController(addr,id):
-    return null
-    #todo https://docs.python.org/2/library/httplib.html
+    dst=pDst+"/32"
+    src=pSrc+"/32"
     
-def pushToController(addr):
-    return null
-    #todo https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
+    namespace="urn:opendaylight:flow:inventory"
+    flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
+    
+    flowName=SubElement(flow, 'flow-name')
+    flowName.text='blockping2opfer'
+
+    tableId=SubElement(flow, 'table_id')
+    tableId.text='0'
+
+    iD=SubElement(flow, 'id')
+    iD.text='200'
+
+    priority=SubElement(flow, 'priority')
+    priority.text='0'
+
+    instructions=SubElement(flow, 'instructions')
+    instruction=SubElement(instructions, 'instruction')
+
+    order=SubElement(instruction, 'order')
+    order.text='0'
+
+    applyActions=SubElement(instruction, 'apply-actions')
+    action=SubElement(applyActions, 'action')
+    order=SubElement(action, 'order')
+    order.text='0'
+    dropAction=SubElement(action, 'drop-action')
+
+    match=SubElement(flow, 'match')
+    ethernetMatch=SubElement(match, 'ethernet-match')
+    ethernetType=SubElement(ethernetMatch, 'ethernet-type')
+    type=SubElement(ethernetType, 'type')
+    type.text='2048'
+    ipv4dst=SubElement(match, 'ipv4-destination')
+    ipv4dst.text=dst
+    ipv4src=SubElement(match, 'ipv4-source')
+    ipv4src.text=src
+    
+    print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
+
+    
+def removeFromController(pAddr,pId):
+    #Reference: https://docs.python.org/2/library/httplib.html
+    addr=pAddr
+    id=pId
+    
+def pushToController(pAddr,pFlow):
+    #Reference: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
+    addr=pAddr
+    flow=pFlow
 
 print("Warten")
 while True:
@@ -79,6 +124,7 @@ while True:
         print "MAC-Source: ", macSrc, " MAC-Destination: ", macDst 
         print "IP-Source: ",ipSrc, " IP-Destination: ", ipDst
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
+        createRule(ipDst,ipSrc)
 
 
 snort.close()
