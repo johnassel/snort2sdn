@@ -113,7 +113,7 @@ def pushToController(pFlow):
     
     
 
-print("Warten")
+print("Waiting")
 while True:
     #Alerts aus dem Socket holen und vorbereiten
     data = snort.recv(buffersize)
