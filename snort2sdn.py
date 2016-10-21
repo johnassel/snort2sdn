@@ -6,6 +6,14 @@ import dpkt
 import datetime
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 from xml.dom import minidom
+import requests
+
+switchId="openflow:248752488641088"
+switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
+
+controllerUser="admin"
+controllerPass="admin"
+
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -35,6 +43,8 @@ def getType(number):
 
 def createRule(pDst,pSrc):
     #Reference: https://pymotw.com/2/xml/etree/ElementTree/create.html
+    
+    print "Creating Rule"
     
     dst=pDst+"/32"
     src=pSrc+"/32"
@@ -76,7 +86,10 @@ def createRule(pDst,pSrc):
     ipv4src=SubElement(match, 'ipv4-source')
     ipv4src.text=src
     
-    print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
+    pushToController(tostring(flow, 'utf-8'))
+       
+    
+    #print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
 
     
 def removeFromController(pAddr,pId):
@@ -84,10 +97,18 @@ def removeFromController(pAddr,pId):
     addr=pAddr
     id=pId
     
-def pushToController(pAddr,pFlow):
+def pushToController(pFlow):
     #Reference: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
-    addr=pAddr
+    #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
     flow=pFlow
+    addr=switchAddr+"200"
+    headers = {"Content-Type":"application/xml","Accept":"application/xml"}
+    print "pushing"
+    response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)
+    
+    print(response.text)
+    
+    
 
 print("Warten")
 while True:
