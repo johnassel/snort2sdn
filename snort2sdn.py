@@ -4,7 +4,7 @@ import os, os.path
 import alert
 import dpkt
 import datetime
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
 import requests
 
@@ -14,6 +14,7 @@ switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/
 controllerUser="admin"
 controllerPass="admin"
 
+ruleCounter=200
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -43,13 +44,14 @@ def getType(number):
 
 def createRule(pDst,pSrc):
     #Reference: https://pymotw.com/2/xml/etree/ElementTree/create.html
+    global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
     
     print "Creating Rule"
     
     dst=pDst+"/32"
     src=pSrc+"/32"
     
-    namespace="urn:opendaylight:flow:inventory"
+    register_namespace('', "urn:opendaylight:flow:inventory")
     flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
     
     flowName=SubElement(flow, 'flow-name')
@@ -59,10 +61,10 @@ def createRule(pDst,pSrc):
     tableId.text='0'
 
     iD=SubElement(flow, 'id')
-    iD.text='200'
+    iD.text=str(ruleCounter)
 
     priority=SubElement(flow, 'priority')
-    priority.text='0'
+    priority.text='1000'
 
     instructions=SubElement(flow, 'instructions')
     instruction=SubElement(instructions, 'instruction')
@@ -87,6 +89,8 @@ def createRule(pDst,pSrc):
     ipv4src.text=src
     
     pushToController(tostring(flow, 'utf-8'))
+    
+    ruleCounter=ruleCounter+1
        
     
     #print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
@@ -101,12 +105,11 @@ def pushToController(pFlow):
     #Reference: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
     flow=pFlow
-    addr=switchAddr+"200"
+    addr=switchAddr+str(ruleCounter)
     headers = {"Content-Type":"application/xml","Accept":"application/xml"}
     print "pushing"
-    response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)
-    
-    print(response.text)
+    response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
+    print(response.content)
     
     
 
@@ -146,6 +149,7 @@ while True:
         print "IP-Source: ",ipSrc, " IP-Destination: ", ipDst
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
         createRule(ipDst,ipSrc)
+        createRule(ipSrc,ipDst)
 
 
 snort.close()

@@ -2,7 +2,7 @@
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
 
-flow = Element('flow') #Namespace!
+flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
 
 flowName=SubElement(flow, 'flow-name')
 flowName.text='blockping2opfer'
@@ -38,6 +38,6 @@ ipv4dst.text='192.168.30.6/32'
 ipv4src=SubElement(match, 'ipv4-source')
 ipv4src.text='192.168.50.40/32'
 
-register_namespace('flow', "urn:opendaylight:flow:inventory")
+register_namespace('', "urn:opendaylight:flow:inventory")
 
 print minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
