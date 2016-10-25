@@ -7,6 +7,7 @@ import datetime
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
 import requests
+from subprocess import call
 
 switchId="openflow:248752488641088"
 switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
@@ -30,6 +31,8 @@ snort.bind(socketPath)
 #setzen des Owners + Group auf Snort (ohne keine alerts)
 os.chown(socketPath, 1001, 1001)
 
+call(["systemctl", "restart", "snortd"]) //Neustart von Snort, damit Socket genutzt wird
+
 def convertMac(addr):#MAC von HEX nach string
     return ':'.join('%02x' % ord(b) for b in addr)
 
@@ -48,14 +51,14 @@ def createRule(pDst,pSrc):
      
     dst=pDst+"/32"
     src=pSrc+"/32"
-    
+
     print "Creating Rule for blocking traffic from "+src+" to "+dst
     
     register_namespace('', "urn:opendaylight:flow:inventory")
     flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
     
     flowName=SubElement(flow, 'flow-name')
-    flowName.text='blockping2opfer'
+    flowName.text='generated from snort alert'
 
     tableId=SubElement(flow, 'table_id')
     tableId.text='0'
@@ -93,7 +96,7 @@ def createRule(pDst,pSrc):
     ruleCounter=ruleCounter+1
        
     
-    #print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
+    print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
 
     
 def removeFromController(pAddr,pId):
@@ -113,8 +116,9 @@ def pushToController(pFlow):
     
     
 
-print("Waiting")
+
 while True:
+    print("Waiting")
     #Alerts aus dem Socket holen und vorbereiten
     data = snort.recv(buffersize)
 	
@@ -142,9 +146,10 @@ while True:
     if not data:
         break
     else:
+        alert=msg[0].replace('(','').replace(')','')
         print "-" * 20
         print str(datetime.datetime.now())
-        print "Alert: ", msg[0] #msg ist ein Tupel
+        print "Alert: ", alert #msg ist ein Tupel
         print "MAC-Source: ", macSrc, " MAC-Destination: ", macDst 
         print "IP-Source: ",ipSrc, " IP-Destination: ", ipDst
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
