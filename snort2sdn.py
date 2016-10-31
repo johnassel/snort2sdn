@@ -13,7 +13,7 @@ from xml.dom import minidom
 from subprocess import call
 
 switchId="openflow:248752488641088"
-switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
+controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
 
 controllerUser="admin"
 controllerPass="admin"
@@ -132,7 +132,7 @@ def pushToController(pFlow):
     #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
     flow=pFlow
-    addr=switchAddr+str(ruleCounter)
+    addr=controllerAddr+str(ruleCounter)
     headers = {"Content-Type":"application/xml","Accept":"application/xml"}
     print "Applying..."
     response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
