@@ -4,13 +4,13 @@ import os, os.path
 import alert
 import dpkt
 import datetime
-import requests
 import time
+import requests
+
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
 
 from subprocess import call
-from thread import start_new_thread
 
 switchId="openflow:248752488641088"
 switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
@@ -20,7 +20,8 @@ controllerPass="admin"
 
 ruleCounter=200 
 
-banTime=5 #Gesperrt für x Sekunden
+banTime=5 #Zeit in Sekunden
+bans=[] #Liste mit REST-IDs der im Controller gebannten IPs
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -36,10 +37,22 @@ snort.bind(socketPath)
 #setzen des Owners + Group auf Snort (ohne keine alerts)
 os.chown(socketPath, 1001, 1001)
 
-call(["systemctl", "restart", "snortd"]) //Neustart von Snort, damit Socket genutzt wird
+call(["systemctl", "restart", "snortd"]) #Neustart von Snort, damit Socket genutzt wird
 
-def checkExpiredbans():
-    return "wololoo"
+class banDetails:
+    def __init__(self, pFlowid):
+        self.flowId=pFlowid        
+        self.bannedTime=int(time.time()) #Unix-Zeitstempel
+
+def checkExpired():
+    global bans
+    global banTime
+    currentTime=int(time.time())
+    
+    if len(bans)!=0:
+        if bans[0].bannedTime<=currentTime+banTime:
+            removeFromController(bans.pop(0).flowId)    
+    
 
 def convertMac(addr):#MAC von HEX nach string
     return ':'.join('%02x' % ord(b) for b in addr)
@@ -56,6 +69,7 @@ def getType(number):
 def createRule(pDst,pSrc):
     #Referenz: https://pymotw.com/2/xml/etree/ElementTree/create.html
     global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
+    global bans
      
     dst=pDst+"/32"
     src=pSrc+"/32"
@@ -100,6 +114,8 @@ def createRule(pDst,pSrc):
     ipv4src.text=src
     
     pushToController(tostring(flow, 'utf-8'))
+    bans.append(banDetails(ruleCounter))
+    checkExpired()
     
     ruleCounter=ruleCounter+1
        
@@ -107,10 +123,10 @@ def createRule(pDst,pSrc):
     print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
 
     
-def removeFromController(pAddr,pId):
+def removeFromController(pId):
     #Referenz: https://docs.python.org/2/library/httplib.html
-    addr=pAddr
     id=pId
+    print("Removing")
     
 def pushToController(pFlow):
     #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
@@ -121,17 +137,8 @@ def pushToController(pFlow):
     print "Applying..."
     response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
     print(response.content)
-  
-class ban:
-    def __init__(self, pFlowid):
-        self.flowId=pFlowid        
-        self.bannedTime=int(time.time())
     
-    def getBannedtime():
-        return self.bannedTime
     
-    def getFlowid():
-        return self.flowID
 
 
 while True:
@@ -139,8 +146,7 @@ while True:
     #Alerts aus dem Socket holen und vorbereiten
     data = snort.recv(buffersize)
 	
-    parsedAlert=alert.AlertPkt.parser(data)    
-    
+    parsedAlert=alert.AlertPkt.parser(data)        
     
     #Entpacken des Ethernet-Frames: http://dpkt.readthedocs.io/en/latest/api/api_auto.html#dpkt.ethernet.Ethernet.data
     etherFrame=dpkt.ethernet.Ethernet(parsedAlert.pkt)
@@ -163,7 +169,6 @@ while True:
     if not data:
         break
     else:
-        alert=msg[0].replace('(','').replace(')','')
         print "-" * 20
         print str(datetime.datetime.now())
         print "Alert: ", alert #msg ist ein Tupel
