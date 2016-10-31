@@ -4,10 +4,13 @@ import os, os.path
 import alert
 import dpkt
 import datetime
+import requests
+import time
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
-import requests
+
 from subprocess import call
+from thread import start_new_thread
 
 switchId="openflow:248752488641088"
 switchAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
@@ -16,6 +19,8 @@ controllerUser="admin"
 controllerPass="admin"
 
 ruleCounter=200 
+
+banTime=5 #Gesperrt für x Sekunden
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -32,6 +37,9 @@ snort.bind(socketPath)
 os.chown(socketPath, 1001, 1001)
 
 call(["systemctl", "restart", "snortd"]) //Neustart von Snort, damit Socket genutzt wird
+
+def checkExpiredbans():
+    return "wololoo"
 
 def convertMac(addr):#MAC von HEX nach string
     return ':'.join('%02x' % ord(b) for b in addr)
@@ -113,8 +121,17 @@ def pushToController(pFlow):
     print "Applying..."
     response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
     print(response.content)
+  
+class ban:
+    def __init__(self, pFlowid):
+        self.flowId=pFlowid        
+        self.bannedTime=int(time.time())
     
+    def getBannedtime():
+        return self.bannedTime
     
+    def getFlowid():
+        return self.flowID
 
 
 while True:
