@@ -23,8 +23,8 @@ controllerPass="admin"
 
 ruleCounter=200 
 
-banTime=5 #Zeit in Sekunden
-bans=[] #Liste mit REST-IDs der im Controller gebannten IPs
+banTime=10 #Zeit in Sekunden
+bans=[] #Liste mit REST-IDs der im Controller gebannten IPs - Anfange: alte Eintraege, Ende: neue Eintraege
 
 socketPath="/var/log/snort/snort_alert"
 
@@ -56,14 +56,13 @@ def checkExpired():
     
     while True:
         currentTime=int(time.time())    
-        #print "current time: ",currentTime
-        print "checking expired"
-        #print "lenght: ",len(bans)
         if len(bans)>0:
-            if bans[0].bannedTime+banTime<=currentTime:
-                print "Removing ",bans[0].flowId," with banned time ",bans[0].bannedTime," current time ",currentTime
-                removeFromController(bans.pop(0).flowId)
-        time.sleep(1)
+            counter=0
+            for ban in bans:
+                if ban.bannedTime+banTime<=currentTime:
+                    print "Removing ",ban.flowId," with banned time ",ban.bannedTime," current time ",currentTime
+                    removeFromController(bans.pop(counter).flowId)
+                counter=counter+1
     
 
 def convertMac(addr):#MAC von HEX nach string
@@ -144,10 +143,10 @@ def pushToController(pFlow):
     addr=controllerAddr+str(ruleCounter)
     headers = {"Content-Type":"application/xml","Accept":"application/xml"}
     
-    print "Blocking using",minidom.parseString(flow).toprettyxml(indent="  ", encoding='UTF-8')
+    #print "Blocking using",minidom.parseString(flow).toprettyxml(indent="  ", encoding='UTF-8')
     requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)
     
-    bans.append(banDetails(ruleCounter))    
+    bans.append(banDetails(ruleCounter)) #Bann ans Ende der List setzen   
     ruleCounter=ruleCounter+1
     
 
@@ -186,7 +185,7 @@ while True:
     else:
         print "-" * 20
         print str(datetime.datetime.now())
-        print "Alert: ", alert #msg ist ein Tupel
+        print "Alert: ", msg[0] #msg ist ein Tupel
         print "MAC-Source: ", macSrc, " MAC-Destination: ", macDst 
         print "IP-Source: ",ipSrc, " IP-Destination: ", ipDst
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
