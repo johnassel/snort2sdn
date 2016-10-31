@@ -80,9 +80,7 @@ def getType(number):
 
 def createRule(pDst,pSrc):
     #Referenz: https://pymotw.com/2/xml/etree/ElementTree/create.html
-    global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
-    global bans
-     
+   
     dst=pDst+"/32"
     src=pSrc+"/32"
 
@@ -125,34 +123,34 @@ def createRule(pDst,pSrc):
     ipv4src=SubElement(match, 'ipv4-source')
     ipv4src.text=src
     
-    pushToController(tostring(flow, 'utf-8'))
-    bans.append(banDetails(ruleCounter))
-    
-    ruleCounter=ruleCounter+1
-       
-    
-    print "Blocking using",minidom.parseString(tostring(flow, 'utf-8')).toprettyxml(indent="  ", encoding='UTF-8')
+    return tostring(flow, 'utf-8')
+
 
     
 def removeFromController(pId):
     #Referenz: https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X DELETE http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/$switch/flow-node-inventory:table/0/flow/$cur
     id=pId
-    print("Removing")
     addr=controllerAddr+str(id)
-    print "Applying..."
-    response=requests.delete(addr, auth=(controllerUser, controllerPass))    
-    print(response.content)
+    requests.delete(addr, auth=(controllerUser, controllerPass))
     
 def pushToController(pFlow):
     #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
+    global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
+    global bans
+    
     flow=pFlow
     addr=controllerAddr+str(ruleCounter)
     headers = {"Content-Type":"application/xml","Accept":"application/xml"}
-    print "Applying..."
-    response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
-    print(response.content)
+    
+    print "Blocking using",minidom.parseString(flow).toprettyxml(indent="  ", encoding='UTF-8')
+    requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)
+    
+    bans.append(banDetails(ruleCounter))    
+    ruleCounter=ruleCounter+1
+    
+
     
 
 start_new_thread(checkExpired,())
@@ -192,8 +190,8 @@ while True:
         print "MAC-Source: ", macSrc, " MAC-Destination: ", macDst 
         print "IP-Source: ",ipSrc, " IP-Destination: ", ipDst
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
-        createRule(ipDst,ipSrc)
-        createRule(ipSrc,ipDst)
+        pushToController(createRule(ipDst,ipSrc))
+        pushToController(createRule(ipSrc,ipDst))
 
 
 snort.close()
