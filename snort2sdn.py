@@ -11,6 +11,9 @@ from xml.etree.ElementTree import Element, SubElement, Comment, tostring, regist
 from xml.dom import minidom
 
 from subprocess import call
+from thread import start_new_thread
+
+##start config secrion##
 
 switchId="openflow:248752488641088"
 controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
@@ -24,6 +27,8 @@ banTime=5 #Zeit in Sekunden
 bans=[] #Liste mit REST-IDs der im Controller gebannten IPs
 
 socketPath="/var/log/snort/snort_alert"
+
+##end config section##
 
 buffersize=alert.AlertPkt._ALERTPKT_SIZE
 
@@ -43,15 +48,22 @@ class banDetails:
     def __init__(self, pFlowid):
         self.flowId=pFlowid        
         self.bannedTime=int(time.time()) #Unix-Zeitstempel
+        print "BanID: ",self.flowId," banned time: ",self.bannedTime
 
 def checkExpired():
     global bans
     global banTime
-    currentTime=int(time.time())
     
-    if len(bans)!=0:
-        if bans[0].bannedTime<=currentTime+banTime:
-            removeFromController(bans.pop(0).flowId)    
+    while True:
+        currentTime=int(time.time())    
+        #print "current time: ",currentTime
+        print "checking expired"
+        #print "lenght: ",len(bans)
+        if len(bans)>0:
+            if bans[0].bannedTime+banTime<=currentTime:
+                print "Removing ",bans[0].flowId," with banned time ",bans[0].bannedTime," current time ",currentTime
+                removeFromController(bans.pop(0).flowId)
+        time.sleep(1)
     
 
 def convertMac(addr):#MAC von HEX nach string
@@ -115,7 +127,6 @@ def createRule(pDst,pSrc):
     
     pushToController(tostring(flow, 'utf-8'))
     bans.append(banDetails(ruleCounter))
-    checkExpired()
     
     ruleCounter=ruleCounter+1
        
@@ -125,8 +136,13 @@ def createRule(pDst,pSrc):
     
 def removeFromController(pId):
     #Referenz: https://docs.python.org/2/library/httplib.html
+    #curl -u admin:admin -X DELETE http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/$switch/flow-node-inventory:table/0/flow/$cur
     id=pId
     print("Removing")
+    addr=controllerAddr+str(id)
+    print "Applying..."
+    response=requests.delete(addr, auth=(controllerUser, controllerPass))    
+    print(response.content)
     
 def pushToController(pFlow):
     #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
@@ -138,11 +154,12 @@ def pushToController(pFlow):
     response=requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
     print(response.content)
     
-    
+
+start_new_thread(checkExpired,())
 
 
 while True:
-    print("Waiting")
+    print("waiting")
     #Alerts aus dem Socket holen und vorbereiten
     data = snort.recv(buffersize)
 	
