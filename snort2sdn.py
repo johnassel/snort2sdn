@@ -6,51 +6,42 @@ import dpkt
 import datetime
 import time
 import requests
-
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, register_namespace
 from xml.dom import minidom
-
 from subprocess import call
 from thread import start_new_thread
 
-##start config secrion##
+##Beginn Konfiguration##
 
 switchId="openflow:248752488641088"
 controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
-
 controllerUser="admin"
 controllerPass="admin"
-
-ruleCounter=200 
-
-banTime=10 #Zeit in Sekunden
+ruleCounter=200 #Start-ID des Flows, ab welchem Bann-Einträge abgelegt werden
+banTime=10 #Zeit für Bann in Sekunden
 bans=[] #Liste mit REST-IDs der im Controller gebannten IPs - Anfange: alte Eintraege, Ende: neue Eintraege
-
 socketPath="/var/log/snort/snort_alert"
-
-##end config section##
-
+##Ende Konfiguration##
+##Vorbereitung##
 buffersize=alert.AlertPkt._ALERTPKT_SIZE
 
-if os.path.exists(socketPath):
+if os.path.exists(socketPath): #Erstellung des Sockets
     os.remove(socketPath)
     
 #Snort benutzt DGRAM-Sockets, nicht STREAM
 snort = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 snort.bind(socketPath)
-
 #setzen des Owners + Group auf Snort (ohne keine alerts)
 os.chown(socketPath, 1001, 1001)
-
 call(["systemctl", "restart", "snortd"]) #Neustart von Snort, damit Socket genutzt wird
 
-class banDetails:
+class banDetails: #Speichert ID mit zugehöriger Zeit, ab wann der Bann abgelaufen ist
     def __init__(self, pFlowid):
         self.flowId=pFlowid        
         self.bannedTime=int(time.time()) #Unix-Zeitstempel
         print "BanID: ",self.flowId," banned time: ",self.bannedTime
 
-def checkExpired():
+def checkExpired(): #Prüfung, ob Einträge abgelaufen sind
     global bans
     global banTime
     
@@ -77,7 +68,7 @@ def getType(number):
         type = "IPv4"
     return type
 
-def createRule(pDst,pSrc):
+def createRule(pDst,pSrc): #Erstellen des an den Controller zu sendenden XMLs
     #Referenz: https://pymotw.com/2/xml/etree/ElementTree/create.html
    
     dst=pDst+"/32"
@@ -86,7 +77,7 @@ def createRule(pDst,pSrc):
     print "Creating Rule for blocking traffic from "+src+" to "+dst
     
     register_namespace('', "urn:opendaylight:flow:inventory")
-    flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace!
+    flow = Element('{urn:opendaylight:flow:inventory}flow') #Namespace! Ohne wird der Flow von OpenDaylight nicht angenommen
     
     flowName=SubElement(flow, 'flow-name')
     flowName.text='generated from snort alert'
@@ -123,62 +114,48 @@ def createRule(pDst,pSrc):
     ipv4src.text=src
     
     return tostring(flow, 'utf-8')
-
-
     
-def removeFromController(pId):
+def removeFromController(pId): #Löschen eines Flows aus dem Controller
     #Referenz: https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X DELETE http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/$switch/flow-node-inventory:table/0/flow/$cur
     id=pId
     addr=controllerAddr+str(id)
     requests.delete(addr, auth=(controllerUser, controllerPass))
     
-def pushToController(pFlow):
+def pushToController(pFlow): #Senden eines Flows zum Controller
     #Referenz: https://stackoverflow.com/questions/33127636/put-request-to-rest-api-using-python https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X PUT -H "Content-Type:application/xml" -H "Accept:application/xml" -d "@block_example.xml" http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/openflow:248752488641088/flow-node-inventory:table/0/flow/200
     global ruleCounter #verhindert Anlegen einer neuen, lokalen Variabel
-    global bans
-    
+    global bans    
     flow=pFlow
     addr=controllerAddr+str(ruleCounter)
-    headers = {"Content-Type":"application/xml","Accept":"application/xml"}
-    
+    headers = {"Content-Type":"application/xml","Accept":"application/xml"}    
     #print "Blocking using",minidom.parseString(flow).toprettyxml(indent="  ", encoding='UTF-8')
-    requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)
-    
+    requests.put(addr, auth=(controllerUser, controllerPass), data=flow, headers=headers)    
     bans.append(banDetails(ruleCounter)) #Bann ans Ende der List setzen   
-    ruleCounter=ruleCounter+1
-    
+    ruleCounter=ruleCounter+1    
 
-    
+#####Beginn der Programmlogik#####
 
-start_new_thread(checkExpired,())
-
+start_new_thread(checkExpired,()) #Überprüfung nach ausgelaufenen Einträgen in einen eigenen Thread
 
 while True:
     print("waiting")
     #Alerts aus dem Socket holen und vorbereiten
-    data = snort.recv(buffersize)
-	
-    parsedAlert=alert.AlertPkt.parser(data)        
-    
+    data = snort.recv(buffersize)	
+    parsedAlert=alert.AlertPkt.parser(data)    
     #Entpacken des Ethernet-Frames: http://dpkt.readthedocs.io/en/latest/api/api_auto.html#dpkt.ethernet.Ethernet.data
-    etherFrame=dpkt.ethernet.Ethernet(parsedAlert.pkt)
-    
+    etherFrame=dpkt.ethernet.Ethernet(parsedAlert.pkt)    
     #Alertmessage
-    msg=parsedAlert.alertmsg
-    
+    msg=parsedAlert.alertmsg    
     #MAC-Adressen
     macSrc = convertMac(etherFrame.src)
-    macDst = convertMac(etherFrame.dst)
-    
+    macDst = convertMac(etherFrame.dst)    
     #IP-Adressen
     ipSrc = convertIp(etherFrame.data.src)
-    ipDst = convertIp(etherFrame.data.dst)
-    
-    #Typ des Packetes
-    packetType = etherFrame.type
-    
+    ipDst = convertIp(etherFrame.data.dst)    
+    #Typ des Paketes
+    packetType = etherFrame.type    
     
     if not data:
         break
@@ -191,7 +168,6 @@ while True:
         print "Type: ", getType(packetType)#Typ nach: https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml (2048=IPv4)
         pushToController(createRule(ipDst,ipSrc))
         pushToController(createRule(ipSrc,ipDst))
-
 
 snort.close()
 os.remove(socketPath)
