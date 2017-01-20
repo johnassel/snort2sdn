@@ -19,11 +19,11 @@ controllerUser="admin"
 controllerPass="admin"
 ruleCounter=200 #Start-ID des Flows, ab welchem Bann-Einträge abgelegt werden
 banTime=10 #Zeit für Bann in Sekunden
-bans=[] #Liste mit REST-IDs der im Controller gebannten IPs - Anfange: alte Eintraege, Ende: neue Eintraege
 socketPath="/var/log/snort/snort_alert"
 ##Ende Konfiguration##
 ##Vorbereitung##
 buffersize=alert.AlertPkt._ALERTPKT_SIZE
+bans=[] #Liste mit REST-IDs der im Controller gebannten IPs - Anfange: alte Eintraege, Ende: neue Eintraege
 
 if os.path.exists(socketPath): #Erstellung des Sockets
     os.remove(socketPath)
