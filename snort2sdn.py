@@ -18,7 +18,7 @@ controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:no
 controllerUser="admin"
 controllerPass="admin"
 ruleCounter=200 #Start-ID des Flows, ab welchem Bann-Eintraege abgelegt werden
-banTime=10 #Zeit für Bann in Sekunden
+banTime=10 #Zeit fuer Bann in Sekunden
 socketPath="/var/log/snort/snort_alert"
 ##Ende Konfiguration##
 ##Vorbereitung##
