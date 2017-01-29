@@ -137,7 +137,7 @@ def pushToController(pFlow): #Senden eines Flows zum Controller
 
 #####Beginn der Programmlogik#####
 
-start_new_thread(checkExpired,()) #Ueberprüfung nach ausgelaufenen Eintraegen in einen eigenen Thread
+start_new_thread(checkExpired,()) #Ueberpruefung nach ausgelaufenen Eintraegen in einen eigenen Thread
 
 while True:
     print("waiting")
