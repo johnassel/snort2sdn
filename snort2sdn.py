@@ -35,13 +35,13 @@ snort.bind(socketPath)
 os.chown(socketPath, 1001, 1001)
 call(["systemctl", "restart", "snortd"]) #Neustart von Snort, damit Socket genutzt wird
 
-class banDetails: #Speichert ID mit zugehöriger Zeit, ab wann der Bann abgelaufen ist
+class banDetails: #Speichert ID mit zugehoeriger Zeit, ab wann der Bann abgelaufen ist
     def __init__(self, pFlowid):
         self.flowId=pFlowid        
         self.bannedTime=int(time.time()) #Unix-Zeitstempel
         print "BanID: ",self.flowId," banned time: ",self.bannedTime
 
-def checkExpired(): #Prüfung, ob Einträge abgelaufen sind
+def checkExpired(): #Pruefung, ob Eintraege abgelaufen sind
     global bans
     global banTime
     
@@ -115,7 +115,7 @@ def createRule(pDst,pSrc): #Erstellen des an den Controller zu sendenden XMLs
     
     return tostring(flow, 'utf-8')
     
-def removeFromController(pId): #Löschen eines Flows aus dem Controller
+def removeFromController(pId): #Loeschen eines Flows aus dem Controller
     #Referenz: https://docs.python.org/2/library/httplib.html
     #curl -u admin:admin -X DELETE http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/$switch/flow-node-inventory:table/0/flow/$cur
     id=pId
@@ -137,7 +137,7 @@ def pushToController(pFlow): #Senden eines Flows zum Controller
 
 #####Beginn der Programmlogik#####
 
-start_new_thread(checkExpired,()) #Überprüfung nach ausgelaufenen Einträgen in einen eigenen Thread
+start_new_thread(checkExpired,()) #Ueberprüfung nach ausgelaufenen Eintraegen in einen eigenen Thread
 
 while True:
     print("waiting")
