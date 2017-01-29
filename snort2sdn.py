@@ -13,7 +13,7 @@ from thread import start_new_thread
 
 ##Beginn Konfiguration##
 
-switchId="openflow:248752488641088"
+switchId="openflow:178256403006279"
 controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
 controllerUser="admin"
 controllerPass="admin"
