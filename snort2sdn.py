@@ -17,7 +17,7 @@ switchId="openflow:248752488641088"
 controllerAddr="http://controller:8181/restconf/config/opendaylight-inventory:nodes/node/"+switchId+"/flow-node-inventory:table/0/flow/"
 controllerUser="admin"
 controllerPass="admin"
-ruleCounter=200 #Start-ID des Flows ab welchem Bann-Einträge abgelegt werden
+ruleCounter=200 #Start-ID des Flows, ab welchem Bann-Eintraege abgelegt werden
 banTime=10 #Zeit für Bann in Sekunden
 socketPath="/var/log/snort/snort_alert"
 ##Ende Konfiguration##
