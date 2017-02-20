@@ -46,7 +46,8 @@ def checkExpired(): #Pruefung, ob Eintraege abgelaufen sind
     global banTime
     
     while True:
-        currentTime=int(time.time())    
+        currentTime=int(time.time())
+        time.sleep(1)
         if len(bans)>0:
             counter=0
             for ban in bans:
