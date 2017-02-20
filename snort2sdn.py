@@ -47,7 +47,7 @@ def checkExpired(): #Pruefung, ob Eintraege abgelaufen sind
     
     while True:
         currentTime=int(time.time())
-        time.sleep(1)
+        time.sleep(1) #verhinder hohe CPU-Last
         if len(bans)>0:
             counter=0
             for ban in bans:
