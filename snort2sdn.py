@@ -142,7 +142,7 @@ start_new_thread(checkExpired,()) #Ueberpruefung nach ausgelaufenen Eintraegen i
 
 while True:
     print("waiting")
-    #Alerts aus dem Socket holen und vorbereiten
+    #Alerts aus dem Socket holen und vorbereiten nach https://github.com/John-Lin/snortunsock/blob/master/snortunsock/snort_listener.py#L6
     data = snort.recv(buffersize)	
     parsedAlert=alert.AlertPkt.parser(data)    
     #Entpacken des Ethernet-Frames: http://dpkt.readthedocs.io/en/latest/api/api_auto.html#dpkt.ethernet.Ethernet.data
